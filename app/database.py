@@ -2,6 +2,7 @@
 """تهيئة قاعدة البيانات باستخدام SQLAlchemy"""
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.exc import IntegrityError
 
 from .config import DATABASE_URL
 
@@ -22,4 +23,8 @@ def get_db():
 
 def init_db():
     from . import models  # noqa: F401
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except IntegrityError:
+        # سباق عند أول إقلاع بعدة عمليات (workers): جدول أُنشئ للتو من عملية أخرى
+        Base.metadata.create_all(bind=engine, checkfirst=True)

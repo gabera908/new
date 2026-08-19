@@ -22,4 +22,4 @@ sys.exit(1)
 PY
 
 echo "[entrypoint] تشغيل خادم uvicorn ..."
-exec uvicorn app.main:app --host 0.0.0.0 --port "${WEB_PORT:-8000}" --workers "${WEB_WORKERS:-2}"
+exec uvicorn app.main:app --host 0.0.0.0 --port "${WEB_PORT:-8000}" --workers "${WEB_WORKERS:-1}"
