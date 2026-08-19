@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}الأستاذ العام{% endblock %}
+{% block content %}
+<h1>الأستاذ العام</h1>
+<p class="hint" style="margin-top:0;margin-bottom:16px;">حركة الحسابات (المستوى 5) مع الرصيد الافتتاحي والجاري والختامي. حدد حساباً أو فترة زمنية ثم صدّر PDF أو Excel.</p>
+
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+<div class="section">
+    <form method="get" action="/ledger" class="form-row">
+        <div class="form-group">
+            <label>الحساب</label>
+            <select name="account_code">
+                <option value="">-- كل الحسابات --</option>
+                {% for a in accounts %}
+                <option value="{{ a.account_code }}" {% if a.account_code == account_code %}selected{% endif %}>{{ a.account_code }} - {{ a.account_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>من تاريخ</label>
+            <input type="date" name="from_date" value="{{ from_date }}">
+        </div>
+        <div class="form-group">
+            <label>إلى تاريخ</label>
+            <input type="date" name="to_date" value="{{ to_date }}">
+        </div>
+        <div class="form-group form-actions" style="align-self:flex-end;">
+            <button type="submit" class="btn btn-primary">عرض</button>
+            <button type="button" class="btn" onclick="clearFilters()">مسح</button>
+            <a class="btn" href="/ledger/export?format=pdf{% if account_code %}&account_code={{ account_code }}{% endif %}{% if from_date %}&from_date={{ from_date }}{% endif %}{% if to_date %}&to_date={{ to_date }}{% endif %}">PDF</a>
+            <a class="btn" href="/ledger/export?format=xlsx{% if account_code %}&account_code={{ account_code }}{% endif %}{% if from_date %}&from_date={{ from_date }}{% endif %}{% if to_date %}&to_date={{ to_date }}{% endif %}">Excel</a>
+        </div>
+    </form>
+</div>
+
+{% if blocks %}
+<div class="section">
+    {% for b in blocks %}
+    <h2 style="margin-top:20px;"><span class="tree-code">{{ b.code }}</span> {{ b.name }}
+        <small class="hint">({{ b.type }})</small>
+    </h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>التاريخ</th><th>رقم المرجع</th><th>البيان</th>
+                <th>مدين (ج.م)</th><th>دائن (ج.م)</th><th>الرصيد الجاري (ج.م)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td colspan="3">رصيد افتتاحي</td>
+                <td>—</td><td>—</td>
+                <td class="tree-balance">{{ b.opening|money }}</td>
+            </tr>
+            {% for ln in b.lines %}
+            <tr>
+                <td>{{ ln.date }}</td>
+                <td>#{{ ln.entry_id }}</td>
+                <td>{{ ln.description }}</td>
+                <td>{% if ln.debit > 0 %}{{ ln.debit|money }}{% else %}—{% endif %}</td>
+                <td>{% if ln.credit > 0 %}{{ ln.credit|money }}{% else %}—{% endif %}</td>
+                <td class="tree-balance">{{ ln.running|money }}</td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <td colspan="3"><strong>الرصيد الختامي</strong></td>
+                <td>—</td><td>—</td>
+                <td class="tree-balance"><strong>{{ b.closing|money }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    {% endfor %}
+</div>
+{% else %}
+<p>لا توجد حركة مسجلة ضمن الفترة المحددة.</p>
+{% endif %}
+
+<script>
+function clearFilters() {
+    window.location.href = '/ledger';
+}
+</script>
+{% endblock %}

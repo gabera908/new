@@ -55,6 +55,115 @@ class AccountingService:
         return True, f"تم ترحيل القيد رقم {entry.id} بنجاح وتحديث الحسابات ومراكز التكلفة المرتبطة."
 
     @staticmethod
+    def update_entry(db: Session, entry_id: int, date, description, lines_data, user_id=None):
+        """تعديل قيد يومية: حذف الأسطر القديمة وإعادة إنشائها مع إعادة حساب الأرصدة"""
+        entry = db.get(models.JournalEntry, entry_id)
+        if not entry:
+            return False, "القيد غير موجود."
+
+        # قواعد الحوكمة نفسها كالترحيل الجديد
+        for ld in lines_data:
+            acc = db.get(models.Account, ld["account_code"])
+            if not acc:
+                return False, f"خطأ حوكمة: كود الحساب {ld['account_code']} غير موجود بالنظام."
+            if not acc.is_selectable or acc.account_level != 5:
+                return False, f"قاعدة حوكمة رقم 1: الحساب {acc.account_name} ليس في المستوى 5. يمنع النظام القيد على حسابات المراقبة أو الحسابات الأب."
+            if ld.get("cost_center_code"):
+                cc = db.get(models.CostCenter, ld["cost_center_code"])
+                if not cc:
+                    return False, f"مركز التكلفة {ld['cost_center_code']} غير موجود."
+
+        total_debit = sum(ld.get("debit", 0.0) or 0.0 for ld in lines_data)
+        total_credit = sum(ld.get("credit", 0.0) or 0.0 for ld in lines_data)
+        if abs(total_debit - total_credit) >= 0.001:
+            return False, f"خطأ توازن: إجمالي المدين ({total_debit:,.2f}) لا يساوي إجمالي الدائن ({total_credit:,.2f})."
+
+        entry.entry_date = date
+        entry.description = description
+
+        # إعادة بناء السطور (حذف ثم إعادة إنشاء)
+        for old in list(entry.lines):
+            db.delete(old)
+        db.flush()
+        for ld in lines_data:
+            line = models.JournalEntryLine(
+                entry_id=entry.id,
+                account_code=ld["account_code"],
+                cost_center_code=ld.get("cost_center_code"),
+                debit=ld.get("debit", 0.0) or 0.0,
+                credit=ld.get("credit", 0.0) or 0.0,
+                notes=ld.get("notes", ""),
+            )
+            db.add(line)
+
+        db.commit()
+        AccountingService.update_balances(db)
+        return True, f"تم تعديل القيد رقم {entry.id} بنجاح وإعادة حساب الأرصدة."
+
+    @staticmethod
+    def delete_entry(db: Session, entry_id: int, user_id=None):
+        """حذف قيد يومية كاملاً (الرأس وسطوره) مع إعادة حساب الأرصدة"""
+        entry = db.get(models.JournalEntry, entry_id)
+        if not entry:
+            return False, "القيد غير موجود."
+        eid = entry.id
+        db.delete(entry)
+        db.commit()
+        AccountingService.update_balances(db)
+        return True, f"تم حذف القيد رقم {eid} بنجاح وإعادة حساب الأرصدة."
+
+    @staticmethod
+    def generate_ledger(db: Session, account_code=None, from_date=None, to_date=None):
+        """الأستاذ العام: لكل حساب مستوى 5، رصيد افتتاحي قبل فترة، حركة فترة، رصيد جارٍ وختامي"""
+        if account_code:
+            accounts = [db.get(models.Account, account_code)]
+        else:
+            accounts = (db.query(models.Account)
+                        .filter(models.Account.account_level == 5)
+                        .order_by(models.Account.account_code).all())
+
+        blocks = []
+        for acc in accounts:
+            if not acc:
+                continue
+            q = (db.query(models.JournalEntryLine, models.JournalEntry)
+                 .join(models.JournalEntry, models.JournalEntryLine.entry_id == models.JournalEntry.id)
+                 .filter(models.JournalEntryLine.account_code == acc.account_code))
+
+            opening = 0.0
+            if from_date:
+                for line, ent in q.filter(models.JournalEntry.entry_date < from_date).all():
+                    delta = float(line.debit or 0.0) - float(line.credit or 0.0)
+                    opening += delta if acc.account_type in ("Assets", "Expenses") else -delta
+
+            running = opening
+            lines = []
+            q_period = q
+            if from_date:
+                q_period = q_period.filter(models.JournalEntry.entry_date >= from_date)
+            if to_date:
+                q_period = q_period.filter(models.JournalEntry.entry_date <= to_date)
+            for line, ent in q_period.order_by(
+                    models.JournalEntry.entry_date, models.JournalEntry.id, models.JournalEntryLine.id).all():
+                delta = float(line.debit or 0.0) - float(line.credit or 0.0)
+                signed = delta if acc.account_type in ("Assets", "Expenses") else -delta
+                running += signed
+                lines.append({
+                    "date": ent.entry_date, "entry_id": ent.id,
+                    "description": ent.description,
+                    "debit": float(line.debit or 0.0), "credit": float(line.credit or 0.0),
+                    "running": running,
+                })
+
+            if lines or opening != 0.0 or account_code:
+                blocks.append({
+                    "code": acc.account_code, "name": acc.account_name,
+                    "type": acc.account_type, "opening": opening,
+                    "lines": lines, "closing": running,
+                })
+        return blocks
+
+    @staticmethod
     def update_balances(db: Session):
         """إعادة حساب أرصدة الحسابات ومراكز التكلفة (Roll-up من المستوى 5 إلى 1)"""
         for acc in db.query(models.Account).all():

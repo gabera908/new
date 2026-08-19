@@ -4,6 +4,9 @@
 <h1>شجرة دليل الحسابات</h1>
 <p class="hint" style="margin-top:0;margin-bottom:16px;">شجرة كاملة بالمستويات (1 → 5) مع الأرصدة الجارية. الحسابات الخضراء قابلة للترحيل مباشرة. اضغط ▾/▸ لطي أي فرع.</p>
 
+{% if success %}<div class="alert alert-success">{{ success }}</div>{% endif %}
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
 {% macro render_node(node, depth) %}
 <tr class="tree-row {% if node.selectable %}leaf-selectable{% endif %}" data-code="{{ node.code }}" data-level="{{ node.level }}">
     <td style="text-align:right; padding-right: {{ 12 + depth * 24 }}px;">
@@ -26,6 +29,77 @@
     {% endfor %}
 {% endif %}
 {% endmacro %}
+
+<div class="section">
+    <h2>إدارة الحسابات</h2>
+
+    <form method="post" action="/chart/add" class="form-row add-account-form">
+        <div class="form-group">
+            <label>تحت الحساب (اختياري)</label>
+            <select name="parent_code">
+                <option value="">— حساب رئيسي جديد (مستوى 1) —</option>
+                {% for a in flat %}
+                {% if a.level < 5 %}
+                <option value="{{ a.code }}">{{ a.code }} - {{ a.name }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group form-group-wide">
+            <label>اسم الحساب</label>
+            <input type="text" name="account_name" required>
+        </div>
+        <div class="form-group">
+            <label>النوع (للحساب الرئيسي فقط)</label>
+            <select name="account_type">
+                {% for t in account_types %}
+                <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group form-actions" style="align-self:flex-end;">
+            <button type="submit" class="btn btn-primary">إضافة حساب</button>
+        </div>
+    </form>
+
+    <table class="table">
+        <thead>
+            <tr><th>الكود</th><th>الاسم</th><th>النوع</th><th>المستوى</th><th>الرصيد (ج.م)</th><th>الإجراءات</th></tr>
+        </thead>
+        <tbody>
+        {% for a in flat %}
+        <tr>
+            <td>{{ a.code }}</td>
+            <td>{{ a.name }}</td>
+            <td>{{ a.type }}</td>
+            <td>مستوى {{ a.level }}</td>
+            <td class="tree-balance">{{ a.balance|money }}</td>
+            <td>
+                <button type="submit" form="edit-{{ a.code }}" class="btn btn-small">تعديل</button>
+                <button type="submit" form="del-{{ a.code }}" class="btn btn-danger btn-small">حذف</button>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    {% for a in flat %}
+    <form id="edit-{{ a.code }}" method="post" action="/chart/edit" class="inline-form">
+        <input type="hidden" name="account_code" value="{{ a.code }}">
+        <input type="hidden" name="account_name" value="{{ a.name }}">
+        <input type="hidden" name="account_type" value="{{ a.type }}">
+        <input type="hidden" name="is_selectable" value="{{ 'on' if a.selectable else '' }}">
+    </form>
+    <form id="del-{{ a.code }}" method="post" action="/chart/delete" class="inline-form">
+        <input type="hidden" name="account_code" value="{{ a.code }}">
+    </form>
+    {% endfor %}
+
+    <div class="form-actions">
+        <a class="btn" href="/chart/export?format=pdf">تصدير PDF</a>
+        <a class="btn" href="/chart/export?format=xlsx">تصدير Excel</a>
+    </div>
+</div>
 
 <div class="section">
     <table class="table">
