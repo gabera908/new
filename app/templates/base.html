@@ -12,19 +12,19 @@
     {% if user %}
     <div class="nav-links">
         <a href="/" class="nav-link">لوحة القيادة</a>
-        {% if role_label == 'محاسب الجمعية المالي' %}
+        {% if user.role in ['admin', 'accountant'] %}
         <a href="/journal" class="nav-link">القيود اليومية</a>
         {% endif %}
-        {% if role_label in ['أمين المخزن', 'محاسب الجمعية المالي', 'مشرف الوحدة الإنتاجية', 'المدير التنفيذي / الإدارة'] %}
+        {% if user.role in ['admin', 'storekeeper', 'accountant', 'production_supervisor', 'executive'] %}
         <a href="/inventory" class="nav-link">المخازن</a>
         {% endif %}
-        {% if role_label == 'مشرف الوحدة الإنتاجية' %}
+        {% if user.role in ['admin', 'production_supervisor'] %}
         <a href="/handover" class="nav-link">تسليم الورشة</a>
         {% endif %}
-        {% if role_label in ['محاسب الجمعية المالي', 'المدير التنفيذي / الإدارة'] %}
+        {% if user.role in ['admin', 'accountant', 'executive'] %}
         <a href="/reports" class="nav-link">تقارير المانحين</a>
         {% endif %}
-        {% if role_label in ['محاسب الجمعية المالي', 'المدير التنفيذي / الإدارة'] %}
+        {% if user.role in ['admin', 'accountant', 'executive'] %}
         <a href="/budget" class="nav-link">الموازنة</a>
         <a href="/rentals" class="nav-link">عقود التأجير</a>
         {% endif %}

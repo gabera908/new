@@ -25,7 +25,7 @@
     </div>
 </div>
 
-{% if role_label in ['محاسب الجمعية المالي', 'المدير التنفيذي / الإدارة'] %}
+{% if user.role in ['admin', 'accountant', 'executive'] %}
 <div class="section">
     <h2>محرك توزيع التكاليف المشتركة الآلي (50% ورشة / 30% تدريب / 20% إدارة)</h2>
     <form method="post" action="/allocation" class="inline-form">
