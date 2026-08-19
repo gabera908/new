@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}اليومية الأمريكية{% endblock %}
+{% block content %}
+<h1>اليومية الأمريكية (سجل القيود الكامل)</h1>
+<p class="hint" style="margin-top:0;margin-bottom:16px;">سجل يومية بالنمط الأمريكي: كل سطر قيد (التاريخ، البيان، الحساب، مدين، دائن، رقم المرجع) مرتباً بتاريخ الترحيل.</p>
+
+<div class="section">
+    {% if rows %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>رقم المرجع</th><th>التاريخ</th><th>البيان</th>
+                <th>الحساب</th><th>مدين (ج.م)</th><th>دائن (ج.م)</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in rows %}
+        <tr>
+            <td>#{{ r.entry_id }}</td>
+            <td>{{ r.date }}</td>
+            <td>{{ r.description }}</td>
+            <td><span class="tree-code">{{ r.account_code }}</span> {{ r.account_name }}</td>
+            <td>{% if r.debit > 0 %}{{ r.debit|money }}{% else %}—{% endif %}</td>
+            <td>{% if r.credit > 0 %}{{ r.credit|money }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>لا توجد قيود مرحلة بعد.</p>
+    {% endif %}
+</div>
+{% endblock %}

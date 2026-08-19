@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}شجرة الحسابات{% endblock %}
+{% block content %}
+<h1>شجرة دليل الحسابات</h1>
+<p class="hint" style="margin-top:0;margin-bottom:16px;">شجرة كاملة بالمستويات (1 → 5) مع الأرصدة الجارية. الحسابات الخضراء قابلة للترحيل مباشرة. اضغط ▾/▸ لطي أي فرع.</p>
+
+{% macro render_node(node, depth) %}
+<tr class="tree-row {% if node.selectable %}leaf-selectable{% endif %}" data-code="{{ node.code }}" data-level="{{ node.level }}">
+    <td style="text-align:right; padding-right: {{ 12 + depth * 24 }}px;">
+        {% if node.children %}
+        <span class="tree-toggle" onclick="toggleRow(this)">▾</span>
+        {% else %}
+        <span class="tree-toggle tree-leaf"></span>
+        {% endif %}
+        <span class="tree-code">{{ node.code }}</span>
+        <span class="tree-name">{{ node.name }}</span>
+        {% if node.selectable %}<span class="badge tree-badge">قابل للترحيل</span>{% endif %}
+    </td>
+    <td>{{ node.type }}</td>
+    <td>مستوى {{ node.level }}</td>
+    <td class="tree-balance">{{ node.balance|money }}</td>
+</tr>
+{% if node.children %}
+    {% for child in node.children %}
+        {{ render_node(child, depth + 1) }}
+    {% endfor %}
+{% endif %}
+{% endmacro %}
+
+<div class="section">
+    <table class="table">
+        <thead>
+            <tr><th>الحساب</th><th>النوع</th><th>المستوى</th><th>الرصيد (ج.م)</th></tr>
+        </thead>
+        <tbody>
+        {% for root in tree %}
+            {{ render_node(root, 0) }}
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function toggleRow(toggle) {
+    const tr = toggle.closest('tr');
+    const code = tr.dataset.code;
+    const collapsed = toggle.textContent === '▾';
+    toggle.textContent = collapsed ? '▸' : '▾';
+    let sib = tr.nextElementSibling;
+    while (sib && sib.classList.contains('tree-row')) {
+        const childCode = sib.dataset.code;
+        if (childCode.length <= code.length || !childCode.startsWith(code)) break;
+        sib.style.display = collapsed ? 'none' : '';
+        sib = sib.nextElementSibling;
+    }
+}
+</script>
+{% endblock %}

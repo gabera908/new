@@ -88,6 +88,14 @@ h3 { font-size: 1.05rem; margin-bottom: 8px; color: #374151; }
 .balance-hint { font-size: .9rem; font-weight: 600; color: #b91c1c; }
 .balance-ok { color: #047857; }
 
+.tree-toggle { cursor: pointer; display: inline-block; width: 18px; color: #1e3a5f; user-select: none; }
+.tree-toggle.tree-leaf { cursor: default; }
+.tree-code { font-weight: 700; color: #1e3a5f; margin-left: 8px; }
+.tree-name { color: #374151; }
+.tree-badge { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; margin-right: 8px; }
+.leaf-selectable { background: #f8fdfa; }
+.tree-balance { font-weight: 600; }
+
 .auth-card {
     max-width: 420px; margin: 60px auto; background: #fff; border: 1px solid #e5e7eb;
     border-radius: 12px; padding: 28px; box-shadow: 0 2px 8px rgba(0,0,0,.06);

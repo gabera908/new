@@ -28,6 +28,10 @@
         <a href="/budget" class="nav-link">الموازنة</a>
         <a href="/rentals" class="nav-link">عقود التأجير</a>
         {% endif %}
+        {% if user.role == 'admin' %}
+        <a href="/chart" class="nav-link">شجرة الحسابات</a>
+        <a href="/journal-american" class="nav-link">اليومية الأمريكية</a>
+        {% endif %}
     </div>
     <div class="nav-user">
         <span>{{ user.full_name }} ({{ role_label }})</span>

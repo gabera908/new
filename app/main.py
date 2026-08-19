@@ -7,7 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .config import SECRET_KEY, APP_NAME, VERSION
 from .database import init_db
-from .routers import auth_routes, journal_routes, inventory_routes, report_routes, governance_routes
+from .routers import auth_routes, journal_routes, inventory_routes, report_routes, governance_routes, ledger_routes
 
 app = FastAPI(title=APP_NAME, version=VERSION)
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
@@ -28,7 +28,7 @@ from starlette.templating import Jinja2Templates
 
 for _t in [auth_routes.templates, journal_routes.templates,
            inventory_routes.templates, report_routes.templates,
-           governance_routes.templates]:
+           governance_routes.templates, ledger_routes.templates]:
     _t.env.filters["money"] = money_filter
 
 app.include_router(auth_routes.router)
@@ -36,6 +36,7 @@ app.include_router(journal_routes.router)
 app.include_router(inventory_routes.router)
 app.include_router(report_routes.router)
 app.include_router(governance_routes.router)
+app.include_router(ledger_routes.router)
 
 
 @app.on_event("startup")
