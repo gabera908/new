@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# قواعد بيانات محلية (تُنشأ عند أول تشغيل)
+*.db
+
+# اختبار و cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# بيئة
+.env
+*.log
+
+# نظام التشغيل
+Thumbs.db
+.DS_Store

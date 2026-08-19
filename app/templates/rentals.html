@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}عقود تأجير الورشة{% endblock %}
+{% block content %}
+<h1>عقود تأجير الورشة للغير والجمعيات</h1>
+
+{% if success %}<div class="alert alert-success">{{ success }}</div>{% endif %}
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+{% if can_review %}
+<div class="section">
+    <h2>تسجيل عقد تأجير جديد (مراجعة واعتماد)</h2>
+    <form method="post" action="/rentals" class="form-grid">
+        <div class="form-group">
+            <label>رقم العقد</label>
+            <input type="text" name="contract_no" placeholder="مثال: RC-2026-001" required>
+        </div>
+        <div class="form-group">
+            <label>اسم المستأجر (الجمعية/الجهة)</label>
+            <input type="text" name="tenant_name" required>
+        </div>
+        <div class="form-group form-group-wide">
+            <label>موضوع التعاقد</label>
+            <input type="text" name="description" placeholder="وصف المقر والأجهزة المؤجرة">
+        </div>
+        <div class="form-group">
+            <label>الإيجار الشهري (ج.م)</label>
+            <input type="number" step="0.01" name="monthly_rent" required min="0.01">
+        </div>
+        <div class="form-group">
+            <label>بداية العقد</label>
+            <input type="date" name="start_date" value="{{ today }}">
+        </div>
+        <div class="form-group">
+            <label>نهاية العقد</label>
+            <input type="date" name="end_date">
+        </div>
+        <button type="submit" class="btn btn-primary">تسجيل العقد</button>
+    </form>
+</div>
+{% else %}
+<div class="alert alert-info">وضع القراءة فقط: لا تملك صلاحية تسجيل عقود التأجير.</div>
+{% endif %}
+
+{% if contracts %}
+<div class="section">
+    <h2>عقود التأجير</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>رقم العقد</th><th>المستأجر</th><th>الموضوع</th>
+                <th>الإيجار الشهري (ج.م)</th><th>المدة</th><th>الحالة</th><th>التاريخ</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for c in contracts %}
+        <tr>
+            <td>{{ c.contract_no }}</td>
+            <td>{{ c.tenant_name }}</td>
+            <td>{{ c.description }}</td>
+            <td>{{ "%.2f"|format(c.monthly_rent) }}</td>
+            <td>{{ c.start_date }} ← {{ c.end_date }}</td>
+            <td>{{ {'PENDING':'بانتظار المراجعة','REVIEWED':'تمت المراجعة','APPROVED':'معتمد','REJECTED':'مرفوض'}.get(c.status, c.status) }}</td>
+            <td>{{ c.created_at }}</td>
+            <td>
+                {% if can_review and c.status == 'PENDING' %}
+                <form method="post" action="/rentals/review" class="inline-form">
+                    <input type="hidden" name="contract_id" value="{{ c.id }}">
+                    <button type="submit" class="btn btn-small">مراجعة</button>
+                </form>
+                {% endif %}
+                {% if can_decide and c.status in ['PENDING', 'REVIEWED'] %}
+                <form method="post" action="/rentals/decide" class="inline-form">
+                    <input type="hidden" name="contract_id" value="{{ c.id }}">
+                    <button type="submit" name="approve" value="yes" class="btn btn-small">اعتماد</button>
+                    <button type="submit" name="approve" value="no" class="btn btn-small btn-danger">رفض</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

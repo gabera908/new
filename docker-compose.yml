@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: ngo_postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: ngo_accounting
+      POSTGRES_USER: admin_ngo
+      POSTGRES_PASSWORD: StrongSecureNgoPassword2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin_ngo -d ngo_accounting"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web_app:
+    image: ngo-accounting-system:latest
+    container_name: ngo_web_erp
+    restart: always
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://admin_ngo:StrongSecureNgoPassword2026@db:5432/ngo_accounting
+      - SECRET_KEY=change-me-in-production
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

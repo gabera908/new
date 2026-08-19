@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}شاشة المخازن{% endblock %}
+{% block content %}
+<h1>شاشة الحركات المخزنية (أمين المخزن)</h1>
+
+{% if success %}<div class="alert alert-success">{{ success }}</div>{% endif %}
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+{% if can_edit %}
+<div class="section">
+    <h2>إذن استلام / صرف بموجب أمر شغل معتمد</h2>
+    <form method="post" action="/inventory/transaction" class="form-grid">
+        <div class="form-group">
+            <label>نوع الحركة</label>
+            <select name="trans_type" required>
+                <option value="RECEIPT">استلام (Receipt)</option>
+                <option value="ISSUE">صرف (Issue)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>الصنف</label>
+            <select name="item_id" required>
+                {% for i in items %}
+                <option value="{{ i.id }}">{{ i.item_code }} - {{ i.item_name }} (المتاح: {{ i.quantity }} {{ i.unit }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>الكمية</label>
+            <input type="number" step="0.01" name="quantity" required min="0">
+        </div>
+        <div class="form-group form-group-wide">
+            <label>رقم أمر الشغل المعتمد</label>
+            <input type="text" name="reference_work_order" placeholder="مثال: WO-2026-014">
+        </div>
+        <button type="submit" class="btn btn-primary">تسجيل الحركة</button>
+    </form>
+</div>
+{% elif can_request %}
+<div class="section">
+    <h2>طلب صرف خامات (مشرف الوحدة الإنتاجية)</h2>
+    <form method="post" action="/inventory/request" class="form-grid">
+        <div class="form-group">
+            <label>الصنف</label>
+            <select name="item_id" required>
+                {% for i in items %}
+                <option value="{{ i.id }}">{{ i.item_code }} - {{ i.item_name }} (المتاح: {{ i.quantity }} {{ i.unit }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>الكمية المطلوبة</label>
+            <input type="number" step="0.01" name="quantity" required min="0">
+        </div>
+        <div class="form-group form-group-wide">
+            <label>الغرض / أمر التشغيل</label>
+            <input type="text" name="reason" placeholder="مثال: أمر تشغيل WO-2026-014">
+        </div>
+        <div class="form-group form-group-wide">
+            <label>
+                <input type="checkbox" name="exceptional" value="yes">
+                صرف استثنائي (الأحجار الكريمة الفاخرة - يعتمده المدير التنفيذي)
+            </label>
+        </div>
+        <button type="submit" class="btn btn-primary">تقديم طلب الصرف</button>
+    </form>
+</div>
+{% else %}
+<div class="alert alert-info">وضع القراءة فقط: لا تملك صلاحية تسجيل حركات مخزنية.</div>
+{% endif %}
+
+{% if requests %}
+<div class="section">
+    <h2>طلبات صرف الخامات</h2>
+    <table class="table">
+        <thead>
+            <tr><th>رقم الطلب</th><th>الصنف</th><th>الكمية</th><th>الغرض</th><th>الحالة</th><th>التاريخ</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for r in requests %}
+        <tr>
+            <td>{{ r.request_no }}{% if r.exceptional %} <span class="badge badge-warning">استثنائي</span>{% endif %}</td>
+            <td>{{ r.item.item_code if r.item else r.item_id }}</td>
+            <td>{{ r.quantity }}</td>
+            <td>{{ r.reason }}</td>
+            <td>{{ {'PENDING':'بانتظار الاعتماد','APPROVED':'معتمد','REJECTED':'مرفوض'}.get(r.status, r.status) }}</td>
+            <td>{{ r.requested_at }}</td>
+            <td>
+                {% if r.status == 'PENDING' and ((r.exceptional and can_approve_exceptional) or (not r.exceptional and can_approve)) %}
+                <form method="post" action="/inventory/request/decide" class="inline-form">
+                    <input type="hidden" name="request_id" value="{{ r.id }}">
+                    <button type="submit" name="approve" value="yes" class="btn btn-small">اعتماد</button>
+                    <button type="submit" name="approve" value="no" class="btn btn-small btn-danger">رفض</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<div class="section">
+    <h2>أرصدة المخازن</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>الكود</th><th>الصنف</th><th>الفئة</th>
+                <th>الوحدة</th><th>الرصيد</th><th>حد الطلب</th><th>تكلفة الوحدة (ج.م)</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for i in items %}
+        <tr class="{% if i.quantity <= i.reorder_level %}row-warning{% endif %}">
+            <td>{{ i.item_code }}</td><td>{{ i.item_name }}</td><td>{{ i.category }}</td>
+            <td>{{ i.unit }}</td><td>{{ i.quantity }}</td><td>{{ i.reorder_level }}</td>
+            <td>{{ "%.2f"|format(i.unit_cost) }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="section">
+    <h2>آخر الحركات المخزنية</h2>
+    <table class="table">
+        <thead>
+            <tr><th>المستند</th><th>النوع</th><th>الصنف</th><th>الكمية</th><th>أمر الشغل</th><th>التاريخ</th></tr>
+        </thead>
+        <tbody>
+        {% for t in transactions %}
+        <tr>
+            <td>{{ t.doc_number }}</td>
+            <td>{{ 'استلام' if t.trans_type == 'RECEIPT' else 'صرف' }}</td>
+            <td>{{ t.item_id }}</td><td>{{ t.quantity }}</td>
+            <td>{{ t.reference_work_order or '—' }}</td><td>{{ t.created_at }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

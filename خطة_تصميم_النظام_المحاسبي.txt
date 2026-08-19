@@ -1,0 +1,131 @@
+# خطة التصميم الفني والهندسي للنظام المحاسبي الاحترافي الموحد
+## مؤسسة النفع العام والوحدات الإنتاجية التابعة
+
+---
+
+### 1. معمارية وهيكل النظام العام (System Architecture)
+يتم بناء النظام كحاوية متكاملة باستخدام **Python 3.11** كـ Backend أساسي، مع ربطه بقاعدة بيانات **PostgreSQL** لضمان الكفاءة والسرعة، ويُرفع النظام بالكامل عبر **Docker Container** ليعمل داخل الشبكة الداخلية للمؤسسة (Intranet) لضمان أمان البيانات.
+
+#### المكونات البرمجية الرئيسية:
+* **دليل الحسابات الشجري (5 مستويات):** مبرمج بقاعدة برمجية تمنع القيد على غير المستوى الخامس.
+* **محرك مراكز التكلفة والأبعاد التمويلية:** لفصل مشاريع المانحين عن الوحدة الإنتاجية للورشة.
+* **محرك المعادلات الآلي (Allocation Engine):** لتوزيع التكاليف المشتركة (الطاقة، الإيجار) بنسب ثابتة (50% ورشة، 30% تدريب، 20% إدارة).
+
+---
+
+### 2. البنية التحتية لقاعدة البيانات (PostgreSQL Database Engine)
+يتم استبدال مصفوفات الحفظ المؤقت بقاعدة بيانات علائقية قوية تعتمد على **SQLAlchemy ORM** للحفاظ على سلامة القيود وتاريخيتها (Historical Logs) مع تفعيل خاصية القيد المزدوج الإجباري (Double-Entry Validation).
+
+#### المخطط الهيكلي للجداول (Database Schema):
+```sql
+-- جدول الحسابات المالي بالمستويات الخمسة
+CREATE TABLE chart_of_accounts (
+    account_code VARCHAR(20) PRIMARY KEY,
+    account_name VARCHAR(150) NOT NULL,
+    account_level INT NOT NULL, -- من 1 إلى 5
+    is_selectable BOOLEAN DEFAULT FALSE, -- نعم فقط للمستوى 5
+    parent_code VARCHAR(20) REFERENCES chart_of_accounts(account_code)
+);
+
+-- جدول مراكز التكلفة (مشاريع المانحين والورش)
+CREATE TABLE cost_centers (
+    center_code VARCHAR(10) PRIMARY KEY,
+    center_name VARCHAR(100) NOT NULL,
+    center_type VARCHAR(50) -- 'NGO_PROJECT', 'WORKSHOP', 'ADMIN'
+);
+
+-- جدول رؤوس القيود اليومية (تاريخية ودائمة)
+CREATE TABLE journal_entries (
+    id SERIAL PRIMARY KEY,
+    entry_date DATE NOT NULL,
+    description TEXT,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- تفاصيل سطور القيود اليومية
+CREATE TABLE journal_entry_lines (
+    id SERIAL PRIMARY KEY,
+    entry_id INT REFERENCES journal_entries(id) ON DELETE CASCADE,
+    account_code VARCHAR(20) REFERENCES chart_of_accounts(account_code),
+    cost_center_code VARCHAR(10) REFERENCES cost_centers(center_code),
+    debit NUMERIC(15, 2) DEFAULT 0.00,
+    credit NUMERIC(15, 2) DEFAULT 0.00,
+    CONSTRAINT check_balanced_line CHECK (debit >= 0 AND credit >= 0)
+);
+```
+
+---
+
+### 3. واجهات المستخدم الرسومية المحترفة (Web GUI - FastAPI / Jinja2)
+تُبنى الواجهات باستخدام **FastAPI** لسرعته الفائقة في معالجة البيانات الحسابية وتقديم لوحات تحكم ديناميكية للموظفين والمحاسبين.
+
+#### تقسيم واجهات النظام (UI Screens):
+1. **شاشة إدخال القيود اليومية (Journal Entry Voucher):** واجهة ذكية تحتوي على حقول منسدلة (Drop-downs) مربوطة بقاعدة البيانات، لا تظهر للمحاسب إلا حسابات المستوى الخامس، مع نظام فحص تلقائي يمنع حفظ القيد إذا لم يتساوى إجمالي المدين مع إجمالي الدائن.
+2. **شاشة الحركات المخزنية (Inventory Hub):** واجهة خاصة بأمين المخزن لتسجيل أذونات استلام الجلود والأحجار بموجب رقم أمر الشغل المعتمد قانوناً.
+3. **لوحة قيادة مجلس الإدارة (Executive Dashboard):** واجهة رسومية تفاعلية تعرض الرسوم البيانية للفائض المالي، ونسب الصرف الفعلي لمشاريع المانحين مقارنة بالموازنة المستهدفة.
+
+---
+
+### 4. نظام الصلاحيات والأمان والرقابة الصارمة (RBAC)
+لحماية أصول المؤسسة ومنع التلاعب بمخزن الخامات (الجلود والأحجار الكريمة) أو تعديل الفواتير، يُطبق نظام **Role-Based Access Control** مع حماية المسارات التفتيشية (Audit Trail).
+
+#### مصفوفة الصلاحيات البرمجية المتطورة:
+
+| الدور الوظيفي (Role) | صلاحيات القيود والمالية | صلاحيات المخازن والخامات | صلاحيات الورشة والتأجير |
+| :--- | :--- | :--- | :--- |
+| **محاسب الجمعية المالي** | إدخال القيود وتعديلها، استخراج التقارير الختامية للمانحين. | استعراض أرصدة كروت الأصناف دفترتياً فقط (بدون صلاحية تعديل). | مراجعة واعتماد قيود وفواتير الإيجار للغير والجمعيات. |
+| **أمين المخزن** | حجب كامل لشاشات القيود المالية والخزائن والبنك. | **صلاحية حصرية لأذونات الصرف والاستلام** بموجب الأوامر الرسمية المعتمدة. | حجب كامل (لا يملك صلاحية تعديل فواتير الإيجار). |
+| **مشرف الوحدة الإنتاجية** | حجب كامل للشاشات المالية العامة للمؤسسة. | صلاحية تقديم "طلب صرف خامات" فقط (بدون تحكم في الأرصدة). | **صلاحية تحرير إذن تسليم الورشة المستأجرة** وإثبات سلامة الآلات. |
+| **المدير التنفيذي / الإدارة** | صلاحية استعراض لوحة القيادة واعتماد الموازنات السنوية. | اعتماد طلبات الصرف الاستثنائية للأحجار الكريمة الفاخرة. | **اعتماد العقود النموذجية للتأجير** وإلغاء أو تعديل الفواتير. |
+
+#### تفعيل المسار التفتيشي (Audit Trail Code):
+يتم تسجيل أي حركة برمجية تتم على النظام في جدول أمني غير قابل للحذف أو التعديل، لضمان معرفة من قام بأي إجراء:
+```python
+# كود أمني مدمج في الـ Backend لتسجيل العمليات الحساسة
+def log_security_event(db_session, user_id, action_type, description):
+    audit_query = """
+        INSERT INTO audit_logs (user_id, action_type, description, ip_address, timestamp)
+        VALUES (:user_id, :action_type, :description, :ip, NOW());
+    """
+    db_session.execute(audit_query, {"user_id": user_id, "action_type": action_type, "description": description, "ip": "Intranet_IP"})
+```
+
+---
+
+### 5. ملفات التجهيز السحابي الداخلي (Docker Deployment)
+النظام يعمل داخل بيئة معزولة محمية تماماً من مشاكل توافق الحزم البرمجية.
+
+#### ملف الـ Docker Compose المعتمد لربط التطبيق بقاعدة البيانات:
+```yaml
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: ngo_postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: ngo_accounting
+      POSTGRES_USER: admin_ngo
+      POSTGRES_PASSWORD: StrongSecureNgoPassword2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  web_app:
+    image: ngo-accounting-system:latest
+    container_name: ngo_web_erp
+    restart: always
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://admin_ngo:StrongSecureNgoPassword2026@db:5432/ngo_accounting
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
+```

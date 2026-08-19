@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}صلاحية مرفوضة{% endblock %}
+{% block content %}
+<div class="auth-card">
+    <h2>صلاحية مرفوضة</h2>
+    <p>عذراً، ليس لديك صلاحية للوصول إلى هذه الصفحة. دورك الحالي: {{ role_label }}</p>
+    <a href="/" class="btn btn-primary">العودة للوحة القيادة</a>
+</div>
+{% endblock %}

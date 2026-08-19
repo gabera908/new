@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}نظام الحوكمة المالي والمخزني{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<nav class="navbar">
+    <div class="nav-brand">نظام الحوكمة المالي والمخزني</div>
+    {% if user %}
+    <div class="nav-links">
+        <a href="/" class="nav-link">لوحة القيادة</a>
+        {% if role_label == 'محاسب الجمعية المالي' %}
+        <a href="/journal" class="nav-link">القيود اليومية</a>
+        {% endif %}
+        {% if role_label in ['أمين المخزن', 'محاسب الجمعية المالي', 'مشرف الوحدة الإنتاجية', 'المدير التنفيذي / الإدارة'] %}
+        <a href="/inventory" class="nav-link">المخازن</a>
+        {% endif %}
+        {% if role_label == 'مشرف الوحدة الإنتاجية' %}
+        <a href="/handover" class="nav-link">تسليم الورشة</a>
+        {% endif %}
+        {% if role_label in ['محاسب الجمعية المالي', 'المدير التنفيذي / الإدارة'] %}
+        <a href="/reports" class="nav-link">تقارير المانحين</a>
+        {% endif %}
+        {% if role_label in ['محاسب الجمعية المالي', 'المدير التنفيذي / الإدارة'] %}
+        <a href="/budget" class="nav-link">الموازنة</a>
+        <a href="/rentals" class="nav-link">عقود التأجير</a>
+        {% endif %}
+    </div>
+    <div class="nav-user">
+        <span>{{ user.full_name }} ({{ role_label }})</span>
+        <a href="/logout" class="nav-link logout">تسجيل الخروج</a>
+    </div>
+    {% endif %}
+</nav>
+
+<main class="container">
+    {% block content %}{% endblock %}
+</main>
+</body>
+</html>

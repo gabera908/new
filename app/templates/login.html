@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}تسجيل الدخول{% endblock %}
+{% block content %}
+<div class="auth-card">
+    <h2>تسجيل الدخول إلى النظام</h2>
+    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+    <form method="post" action="/login">
+        <div class="form-group">
+            <label>اسم المستخدم</label>
+            <input type="text" name="username" required>
+        </div>
+        <div class="form-group">
+            <label>كلمة المرور</label>
+            <input type="password" name="password" required>
+        </div>
+        <button type="submit" class="btn btn-primary">دخول</button>
+    </form>
+    <div class="hint">
+        <p>حسابات تجريبية: accountant / storekeeper / supervisor / executive</p>
+        <p>كلمة المرور = اسم المستخدم</p>
+    </div>
+</div>
+{% endblock %}
