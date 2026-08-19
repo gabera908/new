@@ -4,8 +4,24 @@ from app.rbac import has_permission, role_label, PERMISSIONS
 
 
 def test_roles_defined():
-    assert set(PERMISSIONS) == {"accountant", "storekeeper",
+    assert set(PERMISSIONS) == {"admin", "accountant", "storekeeper",
                                 "production_supervisor", "executive"}
+
+
+def test_admin_all_permissions():
+    assert has_permission("admin", "journal_entry") is True
+    assert has_permission("admin", "reports") is True
+    assert has_permission("admin", "dashboard") is True
+    assert has_permission("admin", "allocation") is True
+    assert has_permission("admin", "inventory_view") is True
+    assert has_permission("admin", "inventory_edit") is True
+    assert has_permission("admin", "inventory_request") is True
+    assert has_permission("admin", "workshop_handover") is True
+    assert has_permission("admin", "rental_review") is True
+    assert has_permission("admin", "approve_rental") is True
+    assert has_permission("admin", "budget_propose") is True
+    assert has_permission("admin", "approve_budget") is True
+    assert has_permission("admin", "approve_exceptional") is True
 
 
 def test_accountant_permissions():
@@ -73,6 +89,7 @@ def test_unknown_permission_returns_false():
 
 
 def test_role_labels_arabic():
+    assert role_label("admin") == "مدير النظام (كامل الصلاحيات)"
     assert role_label("accountant") == "محاسب الجمعية المالي"
     assert role_label("storekeeper") == "أمين المخزن"
     assert role_label("production_supervisor") == "مشرف الوحدة الإنتاجية"

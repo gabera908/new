@@ -83,6 +83,7 @@ COST_CENTERS = [
 ]
 
 USERS = [
+    ("admin", "admin", "مدير النظام (كامل الصلاحيات)", "admin"),
     ("accountant", "accountant", "محاسب الجمعية المالي", "accountant"),
     ("storekeeper", "storekeeper", "أمين المخزن", "storekeeper"),
     ("supervisor", "supervisor", "مشرف الوحدة الإنتاجية", "production_supervisor"),
@@ -99,9 +100,21 @@ ITEMS = [
 ]
 
 
+def ensure_users(db):
+    """إنشاء المستخدمين الناقصين (idempotent) - يضمن وجود admin دائماً"""
+    for username, pwd, full_name, role in USERS:
+        if not db.query(User).filter(User.username == username).first():
+            db.add(User(username=username, full_name=full_name,
+                        password_hash=hash_password(pwd), role=role))
+    db.commit()
+
+
 def seed_if_empty():
     db = SessionLocal()
     try:
+        # إنشاء المستخدمين الناقصين دائماً (حتى لو كانت القاعدة مهيأة مسبقاً)
+        ensure_users(db)
+
         if db.query(Account).count() > 0:
             return
 
@@ -112,10 +125,6 @@ def seed_if_empty():
         # مراكز التكلفة
         for code, name, ctype in COST_CENTERS:
             db.add(CostCenter(center_code=code, center_name=name, center_type=ctype))
-        # المستخدمون (كلمة المرور = اسم المستخدم)
-        for username, pwd, full_name, role in USERS:
-            db.add(User(username=username, full_name=full_name,
-                        password_hash=hash_password(pwd), role=role))
         # الأصناف المخزنية
         for code, name, cat, unit, qty, cost, reorder in ITEMS:
             db.add(InventoryItem(item_code=code, item_name=name, category=cat,

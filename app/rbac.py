@@ -1,8 +1,24 @@
 # -*- coding: utf-8 -*-
 """مصفوفة الصلاحيات (RBAC) حسب خطة التصميم"""
 
-# دور المستخدم: accountant, storekeeper, production_supervisor, executive
+# دور المستخدم: accountant, storekeeper, production_supervisor, executive, admin
 PERMISSIONS = {
+    # مدير النظام: جميع الصلاحيات
+    "admin": {
+        "journal_entry": True,
+        "reports": True,
+        "inventory_view": True,
+        "inventory_edit": True,
+        "inventory_request": True,
+        "workshop_handover": True,
+        "rental_review": True,
+        "approve_rental": True,
+        "budget_propose": True,
+        "approve_budget": True,
+        "approve_exceptional": True,
+        "dashboard": True,
+        "allocation": True,
+    },
     # المحاسب المالي: قيود + تقارير + استعراض أرصدة المخازن (بدون تعديل)
     "accountant": {
         "journal_entry": True,
@@ -61,6 +77,7 @@ def has_permission(role: str, permission: str) -> bool:
 
 def role_label(role: str) -> str:
     labels = {
+        "admin": "مدير النظام (كامل الصلاحيات)",
         "accountant": "محاسب الجمعية المالي",
         "storekeeper": "أمين المخزن",
         "production_supervisor": "مشرف الوحدة الإنتاجية",
