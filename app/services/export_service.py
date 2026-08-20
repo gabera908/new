@@ -15,9 +15,11 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-_FONT_PATH = "app/static/fonts/Cairo-Regular.ttf"
+_FONT_PATH = "app/static/fonts/Arial-Regular.ttf"
+_FONT_BOLD_PATH = "app/static/fonts/Arial-Bold.ttf"
 
-pdfmetrics.registerFont(TTFont("Cairo", _FONT_PATH))
+pdfmetrics.registerFont(TTFont("Arial", _FONT_PATH))
+pdfmetrics.registerFont(TTFont("Arial-Bold", _FONT_BOLD_PATH))
 
 _HDR_BG = "1E3A5F"
 _SUB_BG = "E8EEF4"
@@ -122,18 +124,18 @@ def _pdf_file(title: str, headers: list[str], col_widths_mm: list[float],
 
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle("TitleAr", parent=styles["Title"],
-                                 fontName="Cairo", fontSize=16, leading=22,
+                                 fontName="Arial-Bold", fontSize=16, leading=22,
                                  alignment=TA_CENTER,
                                  textColor=colors.HexColor("#" + _HDR_BG))
     head_style = ParagraphStyle("HeadAr", parent=styles["Normal"],
-                                fontName="Cairo", fontSize=9, leading=12,
+                                fontName="Arial-Bold", fontSize=9, leading=12,
                                 textColor=colors.white, alignment=TA_CENTER)
     cell_style = ParagraphStyle("CellAr", parent=styles["Normal"],
-                                fontName="Cairo", fontSize=8, leading=11,
+                                fontName="Arial", fontSize=8, leading=11,
                                 alignment=TA_RIGHT)
     cell_center = ParagraphStyle("CellC", parent=cell_style, alignment=TA_CENTER)
     cell_left = ParagraphStyle("CellL", parent=cell_style, alignment=TA_LEFT)
-    sub_style = ParagraphStyle("SubAr", parent=cell_style, fontName="Cairo",
+    sub_style = ParagraphStyle("SubAr", parent=cell_style, fontName="Arial",
                                fontSize=8, leading=11, alignment=TA_CENTER,
                                textColor=colors.black)
 
