@@ -108,8 +108,8 @@ def ledger_excel(blocks: list[dict]) -> bytes:
 def _rtl_para(text, style):
     """إنشاء Paragraph عربي مع معالجة الاتجاه الصحيح"""
     reshaped = arabic_reshaper.reshape(str(text))
-    display = get_display(reshaped)
-    return Paragraph(display, style)
+    # لا نستخدم get_display() لأنه مخصص للطرفية — reportlab يتعامل مع RTL عبر alignment
+    return Paragraph(reshaped, style)
 
 
 def _pdf_file(title: str, headers: list[str], col_widths_mm: list[float],

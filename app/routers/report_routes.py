@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """لوحة قيادة مجلس الإدارة والتقارير"""
+from datetime import date
+
 from fastapi import APIRouter, Depends, Request, Form
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import CostCenter, Account, JournalEntry, InventoryItem, AuditLog
+from ..models import CostCenter, Account, InventoryItem, AuditLog, BudgetProposal
 from ..services.accounting_service import AccountingService
 from ..auth import require_login
 from ..rbac import role_label
@@ -14,33 +16,44 @@ router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 
-@router.get("/")
-def dashboard(request: Request, db: Session = Depends(get_db)):
-    user, redirect = require_login(request, db, "dashboard")
-    if redirect:
-        return redirect
-
+def _dashboard_context(db: Session):
+    """كل بيانات لوحة القيادة تُجلب طازجة من قاعدة البيانات عند كل فتح/تحديث"""
     balances = AccountingService.get_balances(db)
     centers = db.query(CostCenter).all()
     center_data = [{"code": c.center_code, "name": c.center_name, "balance": c.balance} for c in centers]
 
-    # بيانات المانحين (مراكز المشاريع الممولة)
-    donor_centers = [c for c in centers if c.center_type == "NGO_PROJECT"]
+    # موازنة المانحين من بنود الموازنة المعتمدة في قاعدة البيانات (سنة مالية الحالية)
+    budget_dict = {
+        p.account_code: p.proposed_amount
+        for p in db.query(BudgetProposal).filter(
+            BudgetProposal.status == "APPROVED",
+            BudgetProposal.fiscal_year == str(date.today().year),
+        ).all()
+    }
     donor_rows, donor_budget, donor_actual, donor_variance = AccountingService.generate_donor_report(
-        db, "101", {"511101": 5000.0, "511102": 3000.0, "511103": 2000.0}
+        db, "101", budget_dict
     )
 
     items = db.query(InventoryItem).all()
     low_stock = [i for i in items if i.quantity <= i.reorder_level]
     recent_audit = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(10).all()
 
-    return templates.TemplateResponse(request, "dashboard.html", {
-        "user": user, "role_label": role_label(user.role),
+    return {
         "balances": balances, "currency": "ج.م",
         "center_data": center_data,
         "donor_rows": donor_rows, "donor_budget": donor_budget,
         "donor_actual": donor_actual, "donor_variance": donor_variance,
         "low_stock": low_stock, "audit_logs": recent_audit,
+    }
+
+
+@router.get("/")
+def dashboard(request: Request, db: Session = Depends(get_db)):
+    user, redirect = require_login(request, db, "dashboard")
+    if redirect:
+        return redirect
+    return templates.TemplateResponse(request, "dashboard.html", {
+        "user": user, "role_label": role_label(user.role), **_dashboard_context(db),
     })
 
 
@@ -93,13 +106,8 @@ def allocation_post(request: Request, amount: float = Form(...),
     if redirect:
         return redirect
     ok, msg = AccountingService.execute_joint_cost_allocation(db, amount, user.id)
-    balances = AccountingService.get_balances(db)
-    centers = db.query(CostCenter).all()
-    center_data = [{"code": c.center_code, "name": c.center_name, "balance": c.balance} for c in centers]
     return templates.TemplateResponse(request, "dashboard.html", {
         "user": user, "role_label": role_label(user.role),
-        "balances": balances, "currency": "ج.م", "center_data": center_data,
+        **_dashboard_context(db),
         "success": msg if ok else None, "error": msg if not ok else None,
-        "donor_rows": [], "donor_budget": 0, "donor_actual": 0, "donor_variance": 0,
-        "low_stock": [], "audit_logs": [],
     })

@@ -106,10 +106,5 @@ def inventory_post(request: Request,
         db, doc_number, trans_type, item_id, quantity,
         reference_work_order or "بدون أمر شغل", user.id, user.username)
 
-    items = db.query(InventoryItem).all()
-    txs = db.query(InventoryTransaction).order_by(InventoryTransaction.created_at.desc()).limit(20).all()
-    return templates.TemplateResponse(request, "inventory.html", {
-        "user": user, "role_label": role_label(user.role),
-        "items": items, "transactions": txs, "can_edit": True,
-        "success": msg if ok else None, "error": msg if not ok else None,
-    })
+    return _render_inventory(request, db, user, success=msg if ok else None,
+                             error=msg if not ok else None)
