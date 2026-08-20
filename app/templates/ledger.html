@@ -37,24 +37,33 @@
 {% if blocks %}
 <div class="section">
     {% for b in blocks %}
-    <h2 style="margin-top:20px;"><span class="tree-code">{{ b.code }}</span> {{ b.name }}
-        <small class="hint">({{ b.type }})</small>
-    </h2>
-    <table class="table">
+    <table class="table" dir="rtl" style="margin-bottom:24px;">
         <thead>
             <tr>
-                <th>التاريخ</th><th>رقم المرجع</th><th>البيان</th>
-                <th>مدين (ج.م)</th><th>دائن (ج.م)</th><th>الرصيد الجاري (ج.م)</th>
+                <th>كود الحساب</th>
+                <th>الحساب</th>
+                <th>التاريخ</th>
+                <th>رقم المرجع</th>
+                <th>البيان</th>
+                <th>مدين (ج.م)</th>
+                <th>دائن (ج.م)</th>
+                <th>الرصيد الجاري</th>
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td colspan="3">رصيد افتتاحي</td>
-                <td>—</td><td>—</td>
+            <tr style="background:#f0f4f8;">
+                <td>{{ b.code }}</td>
+                <td>{{ b.name }} ({{ b.type }})</td>
+                <td colspan="2">رصيد افتتاحي</td>
+                <td></td>
+                <td style="text-align:center;">—</td>
+                <td style="text-align:center;">—</td>
                 <td class="tree-balance">{{ b.opening|money }}</td>
             </tr>
             {% for ln in b.lines %}
             <tr>
+                <td></td>
+                <td></td>
                 <td>{{ ln.date }}</td>
                 <td>#{{ ln.entry_id }}</td>
                 <td>{{ ln.description }}</td>
@@ -63,10 +72,14 @@
                 <td class="tree-balance">{{ ln.running|money }}</td>
             </tr>
             {% endfor %}
-            <tr>
-                <td colspan="3"><strong>الرصيد الختامي</strong></td>
-                <td>—</td><td>—</td>
-                <td class="tree-balance"><strong>{{ b.closing|money }}</strong></td>
+            <tr style="background:#f0f4f8;font-weight:bold;">
+                <td>{{ b.code }}</td>
+                <td>اجمالي {{ b.name }}</td>
+                <td colspan="2">الرصيد الختامي</td>
+                <td></td>
+                <td style="text-align:center;">—</td>
+                <td style="text-align:center;">—</td>
+                <td class="tree-balance">{{ b.closing|money }}</td>
             </tr>
         </tbody>
     </table>
