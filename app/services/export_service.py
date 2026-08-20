@@ -7,6 +7,7 @@ from bidi.algorithm import get_display
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from reportlab.lib import colors
+from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
@@ -102,8 +103,15 @@ def ledger_excel(blocks: list[dict]) -> bytes:
 
 
 # --------------------------------------------------------------------------
-# PDF (reportlab)
+# PDF (reportlab) — RTL support
 # --------------------------------------------------------------------------
+def _rtl_para(text, style):
+    """إنشاء Paragraph عربي مع معالجة الاتجاه الصحيح"""
+    reshaped = arabic_reshaper.reshape(str(text))
+    display = get_display(reshaped)
+    return Paragraph(display, style)
+
+
 def _pdf_file(title: str, headers: list[str], col_widths_mm: list[float],
               body: list[tuple[list, str]], landscape_page: bool = True) -> bytes:
     """body: قائمة (صف، kind) حيث kind ∈ {row, sub, acc} للتمييز بالألوان"""
@@ -117,33 +125,37 @@ def _pdf_file(title: str, headers: list[str], col_widths_mm: list[float],
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle("TitleAr", parent=styles["Title"],
                                  fontName="Cairo", fontSize=16, leading=22,
-                                 alignment=1, textColor=colors.HexColor("#1E3A5F"))
+                                 alignment=TA_CENTER,
+                                 textColor=colors.HexColor("#" + _HDR_BG))
     head_style = ParagraphStyle("HeadAr", parent=styles["Normal"],
                                 fontName="Cairo", fontSize=9, leading=12,
-                                textColor=colors.white, alignment=1)
+                                textColor=colors.white, alignment=TA_CENTER)
     cell_style = ParagraphStyle("CellAr", parent=styles["Normal"],
-                                fontName="Cairo", fontSize=8, leading=11)
-    acc_style = ParagraphStyle("AccAr", parent=cell_style, fontName="Cairo",
-                               fontSize=9, leading=12, textColor=colors.HexColor("#1E3A5F"))
+                                fontName="Cairo", fontSize=8, leading=11,
+                                alignment=TA_RIGHT)
+    cell_center = ParagraphStyle("CellC", parent=cell_style, alignment=TA_CENTER)
+    cell_left = ParagraphStyle("CellL", parent=cell_style, alignment=TA_LEFT)
+    sub_style = ParagraphStyle("SubAr", parent=cell_style, fontName="Cairo",
+                               fontSize=8, leading=11, alignment=TA_CENTER,
+                               textColor=colors.black)
 
-    story = [Paragraph(ar(title), title_style), Spacer(1, 4 * mm)]
+    story = [_rtl_para(title, title_style), Spacer(1, 4 * mm)]
 
-    def cell(text, style=cell_style):
-        return Paragraph(ar(text), style)
+    # عكس ترتيب الأعمدة RTL → الأعمدة تظهر من اليمين لليسار
+    rtl_headers = list(reversed(headers))
 
-    data = [[cell(h, head_style) for h in headers]]
+    data = [[_rtl_para(h, head_style) for h in rtl_headers]]
     styled_rows = []
     for row, kind in body:
+        rtl_row = list(reversed(row))
         if kind == "sub":
-            data.append([cell(v, ParagraphStyle("sub", parent=cell_style,
-                                                fontName="Cairo", fontSize=8,
-                                                leading=11, textColor=colors.black))
-                         for v in row])
+            data.append([_rtl_para(v, sub_style) for v in rtl_row])
         else:
-            data.append([cell(v) for v in row])
+            data.append([_rtl_para(v, cell_style) for v in rtl_row])
         styled_rows.append((len(data) - 1, kind))
 
-    table = Table(data, colWidths=[w * mm for w in col_widths_mm], repeatRows=1)
+    table = Table(data, colWidths=[w * mm for w in reversed(col_widths_mm)],
+                  repeatRows=1)
     style_cmds = [
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#" + _HDR_BG)),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#B9C4CF")),
@@ -153,9 +165,11 @@ def _pdf_file(title: str, headers: list[str], col_widths_mm: list[float],
     ]
     for row_idx, kind in styled_rows:
         if kind == "acc":
-            style_cmds.append(("BACKGROUND", (0, row_idx), (-1, row_idx), colors.HexColor("#" + _ACC_BG)))
+            style_cmds.append(("BACKGROUND", (0, row_idx), (-1, row_idx),
+                               colors.HexColor("#" + _ACC_BG)))
         elif kind == "sub":
-            style_cmds.append(("BACKGROUND", (0, row_idx), (-1, row_idx), colors.HexColor("#" + _SUB_BG)))
+            style_cmds.append(("BACKGROUND", (0, row_idx), (-1, row_idx),
+                               colors.HexColor("#" + _SUB_BG)))
     table.setStyle(TableStyle(style_cmds))
     story.append(table)
     doc.build(story)
