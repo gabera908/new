@@ -57,18 +57,19 @@ def inventory_request_decide(request: Request,
                              request_id: int = Form(...),
                              approve: str = Form("no"),
                              db: Session = Depends(get_db)):
+    user, redirect = require_login(request, db)
+    if redirect:
+        return redirect
+
     req = db.get(MaterialRequest, request_id)
     if not req:
-        user, redirect = require_login(request, db, "inventory_edit")
-        if redirect:
-            return redirect
         return _render_inventory(request, db, user, error="الطلب غير موجود")
 
     # الصرف الاستثنائي للأحجار الكريمة الفاخرة يعتمده المدير التنفيذي
     permission = "approve_exceptional" if req.exceptional else "inventory_edit"
-    user, redirect = require_login(request, db, permission)
-    if redirect:
-        return redirect
+    if not has_permission(user.role, permission):
+        return RedirectResponse("/forbidden", status_code=303)
+
     ok, msg = InventoryService.approve_material_request(
         db, request_id, approve == "yes", user.id, user.username)
     return _render_inventory(request, db, user, success=msg if ok else None,
