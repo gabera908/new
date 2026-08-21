@@ -59,20 +59,29 @@ def journal_post(request: Request,
                  description: str = Form(...),
                  account_codes: list[str] = Form(...),
                  cost_centers: list[str] = Form(default=[]),
-                 debits: list[float] = Form(...),
-                 credits: list[float] = Form(...),
+                 debits: list[str] = Form(...),
+                 credits: list[str] = Form(...),
                  notes_list: list[str] = Form(default=[]),
                  db: Session = Depends(get_db)):
     user, redirect = require_login(request, db, "journal_entry")
     if redirect:
         return redirect
 
+    def to_float(val: str) -> float:
+        try:
+            return float(val) if val != "" else 0.0
+        except (ValueError, TypeError):
+            return 0.0
+
+    debits_f = [to_float(d) for d in debits]
+    credits_f = [to_float(c) for c in credits]
+
     lines = []
     for i, acc in enumerate(account_codes):
         cc = cost_centers[i] if i < len(cost_centers) and cost_centers[i] else None
         note = notes_list[i] if i < len(notes_list) else ""
         lines.append({"account_code": acc, "cost_center_code": cc,
-                      "debit": debits[i], "credit": credits[i], "notes": note})
+                      "debit": debits_f[i], "credit": credits_f[i], "notes": note})
 
     try:
         entry_dt = date.fromisoformat(entry_date)
@@ -118,20 +127,29 @@ def journal_edit_post(request: Request, entry_id: int,
                       description: str = Form(...),
                       account_codes: list[str] = Form(...),
                       cost_centers: list[str] = Form(default=[]),
-                      debits: list[float] = Form(...),
-                      credits: list[float] = Form(...),
+                      debits: list[str] = Form(...),
+                      credits: list[str] = Form(...),
                       notes_list: list[str] = Form(default=[]),
                       db: Session = Depends(get_db)):
     user, redirect = _require_admin(request, db)
     if redirect:
         return redirect
 
+    def to_float(val: str) -> float:
+        try:
+            return float(val) if val != "" else 0.0
+        except (ValueError, TypeError):
+            return 0.0
+
+    debits_f = [to_float(d) for d in debits]
+    credits_f = [to_float(c) for c in credits]
+
     lines = []
     for i, acc in enumerate(account_codes):
         cc = cost_centers[i] if i < len(cost_centers) and cost_centers[i] else None
         note = notes_list[i] if i < len(notes_list) else ""
         lines.append({"account_code": acc, "cost_center_code": cc,
-                      "debit": debits[i], "credit": credits[i], "notes": note})
+                      "debit": debits_f[i], "credit": credits_f[i], "notes": note})
 
     try:
         entry_dt = date.fromisoformat(entry_date)
